@@ -8,7 +8,9 @@ fresh chain with the same five accounts.
 
 The dashboard has **Wallet**, **Explorer**, and **Network** pages. Use `ths
 open` to bring it up. On desktop, the **Mine** button sits at the top of
-each page; on a narrow screen you can always use `ths mine`.
+each page; on a narrow screen you can always use `ths mine`. If the browser
+blocks clipboard access, a copy button shows a notification with the value to
+copy by hand.
 
 ## First, observe the starting state
 
@@ -20,10 +22,27 @@ history, supplies these balances.
 
 ![The Wallet page: a total balance banner over five account cards, each showing Ironwood and transparent balances, a truncated unified address, and Fund and Send buttons. Request and Send ZEC controls sit above the cards, Faucet and Mine are in the header, and Recent activity is below.](images/wallet.png)
 
+Select an account's name to open its detail page. The full unified address and
+transparent address each have a copy button. The unified full viewing key is
+also shown and copyable when the server supplies it; an older server that omits
+the key simply has no viewing-key row. These pages cover development accounts
+1–5 only.
+
+Explorer also recognises those accounts. Searching the exact unified address of
+a local account opens the same account page. Known transparent addresses in
+transaction and address views have an **Account N** link beside their public
+chain information. Unknown transparent addresses keep their normal Explorer
+view; an unknown unified address still has no public chain-history page.
+Viewing keys appear only on the account detail page, not in Explorer rows or
+search results.
+
 Two buttons open the faucet, and they are labelled differently. **Faucet**
 in the page header is the general one, and it only appears on Wallet — the
 Explorer and Network pages show just **Mine**. On each account card,
 **Fund** opens the same dialog with that account preselected.
+
+Recent activity ages update while the page is idle. This only refreshes the
+displayed time; payment status still comes from the server.
 
 ## Fund Account 2's transparent pool
 
@@ -82,6 +101,11 @@ The dialog does the fee arithmetic for you. As soon as it has an account and
 a pool it asks `POST /api/v1/send/quote`, and the hint under the amount field
 shows the quoted spendable amount and network fee for that account and pool.
 The **Max** button fills in that spendable figure. An amount above it is rejected.
+An amount above 21,000,000 ZEC, the maximum supply, is rejected before the
+request is sent.
+
+Closing Send while the fee check is pending cancels that submission. A payment
+already submitted keeps running and remains available through **Payments**.
 
 ![The Send ZEC dialog over the Wallet page: Payment request input and Apply button above From account 1 and Ironwood Source pool, Destination Account 2 and Ironwood Destination pool, Amount (ZEC) 1 with Max and a live fee quote, and the memo hello from Regtest with its UTF-8 byte count.](images/send.png)
 
@@ -122,14 +146,16 @@ the server rejects a present memo there too.
 
 The server stores the supplied memo in its idempotency record to compare
 replayed requests. An absent memo and an explicit empty text memo are different
-payment identities. Activity has no memo field, and the dashboard's transaction views do not
-decrypt received memos. ZIP-321 parsing can return a memo supplied in its input;
+payment identities. To read a payment's memo, open its transaction ID from
+Recent activity and select **Decrypt actions**. ZIP-321 parsing can return a
+memo supplied in its input;
 that does not read a memo from the chain.
 
 `GET /api/v1/accounts` provides a `unified_full_viewing_key` for each user
 account. An external wallet imported with that key can decrypt memos sent to
 that account. Public Explorer data reveals neither memo plaintext nor private
-Ironwood recipient addresses.
+Ironwood recipient addresses; the Explorer's **Decrypt actions** button,
+described below, shows what this environment's wallet recorded.
 
 ## Create a request for another sender
 
@@ -157,7 +183,9 @@ Paste a single-payment `zcash:` URI into **Payment request
 (optional)** and select **Apply**. The server resolves its address, pool,
 optional amount, and text memo. Supply the amount when the request omits it.
 Editing the URI disables Send until that revision is applied or the field is
-cleared; a stale parse result cannot authorize the edited request.
+cleared; a stale parse result cannot authorize the edited request. Editing the
+transfer fields while Apply is pending also discards that result. Apply again
+to replace the draft, or clear the request to continue with manual edits.
 
 ![The Send ZEC dialog with a Regtest payment URI filled into Payment request (optional), Apply enabled, and Send ZEC disabled until the request is applied or cleared.](images/payment-request.png)
 
@@ -187,6 +215,37 @@ Transparent inputs and outputs are public chain data; Ironwood details are
 not exposed as the user-account transfer shown by Recent activity. The
 server's activity record knows the development account IDs, while the
 Explorer follows the public chain.
+
+A transaction with shielded actions has a **Decrypt actions** button on its
+**Ironwood actions** row. It shows what this environment's wallet recorded
+about the transaction for accounts 1–5, below that row. It is local wallet
+state, not public chain data, and is read only when you select the button.
+Each output lists its pool and index, **From**, **To**, the memo, and the
+value. **From** is an account, **Faucet** for a treasury payment, or
+**External**; a shielded sender outside the accounts never reveals an address.
+**To** is an account, or else the address the wallet recorded. Accounts link to
+their account page and transparent addresses to their Explorer page; a unified
+address outside the accounts has no public page. Change returned to the sending
+account is marked **Change**; a non-text memo is shown as hex. Below the
+outputs, the notes the accounts spent are grouped by account and pool. The
+fee is the **Fee** row of the disclosure summary. A transaction none of the
+accounts sent or received shows **No local account is involved in this
+transaction.** A warning appears while the wallet has not fetched the full
+transaction yet, because a memo can be missing until then, and when it could
+not fetch it at all. A payment from outside the accounts appears only after it
+is mined and the wallet has scanned its block. The same data is available from
+`ths wallet tx` and `GET /api/v1/transactions/{txid}/wallet`; see [Read what
+the wallet recorded about a
+transaction](connect-an-app.md#read-what-the-wallet-recorded-about-a-transaction).
+
+The **Pending transactions** panel lists transactions the node has received but
+has not yet included in a block. It appears only while at least one is
+waiting, and refreshes automatically, including when an external app
+broadcasts without advancing the chain. Open a transaction ID to
+inspect it before mining. **Mine 1 block** opens the existing mining controls
+with one block selected; confirm there to start the job. Once a transaction is
+mined, it leaves the pending list, and the panel disappears when nothing is
+left. A failed read shows an error instead of hiding the panel.
 
 ![The Explorer page: a single search field accepting a block height, block hash, transaction ID, or t-address, above a Blocks table listing recent heights with their block hash, transaction count, size, and time.](images/explorer.png)
 

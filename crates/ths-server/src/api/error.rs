@@ -67,6 +67,7 @@ impl From<anyhow::Error> for ApiError {
         } else {
             match error.downcast_ref::<PaymentError>() {
                 Some(PaymentError::TreasuryExhausted) => StatusCode::SERVICE_UNAVAILABLE,
+                Some(PaymentError::ScanRequired) => StatusCode::SERVICE_UNAVAILABLE,
                 Some(PaymentError::InsufficientFunds { .. }) => StatusCode::UNPROCESSABLE_ENTITY,
                 Some(PaymentError::TransparentMemo) => StatusCode::BAD_REQUEST,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -167,6 +168,9 @@ fn json_api_error(rejection: JsonRejection, path: &str) -> ApiError {
             "Content-Type must be application/json".to_owned()
         }
         JsonRejection::JsonSyntaxError(_) => "request body must be valid JSON".to_owned(),
+        JsonRejection::BytesRejection(_) if rejection.status() == StatusCode::PAYLOAD_TOO_LARGE => {
+            "request body exceeds the maximum allowed size".to_owned()
+        }
         JsonRejection::BytesRejection(_) => "request body could not be read".to_owned(),
         JsonRejection::JsonDataError(_) => friendly_parse_message(&rejection.body_text(), path),
         _ => friendly_parse_message(&rejection.body_text(), path),

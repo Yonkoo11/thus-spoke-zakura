@@ -90,6 +90,10 @@ async fn api_error_logs_skip_expected_failures() {
             anyhow::Error::new(PaymentError::TreasuryExhausted),
             StatusCode::SERVICE_UNAVAILABLE,
         ),
+        (
+            anyhow::Error::new(PaymentError::ScanRequired),
+            StatusCode::SERVICE_UNAVAILABLE,
+        ),
     ] {
         let error = error.context("payment could not complete");
         let (response, logs) = capture_logs(|| ApiError::from(error).into_response());
@@ -122,26 +126,6 @@ async fn api_error_logs_skip_explorer_misses() {
             json!({"error": {"message": NO_BLOCK, "status": 404}})
         );
     }
-}
-
-#[test]
-fn a_dry_treasury_is_reported_as_unavailable() {
-    assert_eq!(
-        ApiError::from(anyhow::Error::new(PaymentError::TreasuryExhausted)).status,
-        StatusCode::SERVICE_UNAVAILABLE
-    );
-}
-
-#[test]
-fn an_unaffordable_send_is_reported_as_a_client_error() {
-    assert_eq!(
-        ApiError::from(anyhow::Error::new(PaymentError::InsufficientFunds {
-            available: 100_000_000,
-            required: 100_010_000,
-        }))
-        .status,
-        StatusCode::UNPROCESSABLE_ENTITY
-    );
 }
 
 /// A request that never reaches the handler must still use the JSON envelope.

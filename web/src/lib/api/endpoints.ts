@@ -8,6 +8,7 @@ import {
   addressSchema,
   blockPageSchema,
   blockSchema,
+  mempoolSchema,
   miningJobSchema,
   miningJobResponseSchema,
   paymentRequestSchema,
@@ -15,6 +16,7 @@ import {
   sendQuoteSchema,
   statusSchema,
   transactionSchema,
+  walletTransactionSchema,
   type Pool,
   type SendQuoteInput,
   type AddressFaucet,
@@ -65,6 +67,12 @@ export const api = {
   block: (id: string | number) => request(`/blocks/${id}`, blockSchema),
 
   transaction: (txid: string) => request(`/transactions/${txid}`, transactionSchema),
+
+  /** What the local wallet recorded about a transaction for accounts 1-5. */
+  walletTransaction: (txid: string) =>
+    request(`/transactions/${encodeURIComponent(txid)}/wallet`, walletTransactionSchema),
+
+  mempool: () => request('/mempool', mempoolSchema),
 
   address: (address: string) => request(`/addresses/${address}`, addressSchema),
 
