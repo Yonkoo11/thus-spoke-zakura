@@ -318,7 +318,12 @@ async fn treasury_maturity_mining_runs_in_auto_and_mempool_modes() {
         };
         // An empty mempool never wakes the mempool miner, so treasury coinbase
         // maturity has to be mined by the payment itself in that mode.
-        let _ = FaucetRuntime::mine_to_height(&attempt, 108).await;
+        let reached = FaucetRuntime::mine_to_height(&attempt, 108).await;
+        // The fake node has no block lookup or wallet backend, so a mining
+        // mode fails after `generate`; interval and manual modes fail before it
+        // because no block was produced.
+        let skipped = format!("{reached:?}").contains("did not reach height");
+        assert_eq!(skipped, expected == 0, "{mode:?}: {reached:?}");
         assert_eq!(generated.load(Ordering::SeqCst), expected, "{mode:?}");
         server.abort();
         assert!(server.await.unwrap_err().is_cancelled());

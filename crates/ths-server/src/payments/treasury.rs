@@ -644,8 +644,13 @@ where
                     if advanced_anchor {
                         return Err(error);
                     }
-                    if runtime.chain_height().await? < *height {
-                        runtime.mine_and_sync(1).await?;
+                    let current = runtime.chain_height().await?;
+                    if current < *height {
+                        // Same path as maturity mining: mempool mode never
+                        // mines this block on its own with an empty mempool.
+                        runtime
+                            .mine_empty_and_sync(u32::try_from(*height - current)?)
+                            .await?;
                     }
                     if runtime.chain_height().await? < *height {
                         return Err(error);
